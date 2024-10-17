@@ -146,8 +146,8 @@ bool init_c8(chip8_t *c8, char rom_name[]){
     fclose(rom);
     c8->state = RUNNING;            // change state and start game
     c8->PC = entry;                 // start program counter entry
-    c8->rom_name = rom_name;
-    c8->SP = &c8->stack[0];
+    c8->rom_name = rom_name;        // set chip8 rom
+    c8->SP = &c8->stack[0];         // set stack ptr to top of stack
     return true;                    // successful start-up
 }
 
@@ -163,7 +163,7 @@ void print_debug_info(chip8_t *c8){
                 // 0x00EE return from subroutine
                 printf("Return from Subroutine to Addr: 0x%04X\n", *(c8->SP-1));
             } else { 
-                printf("Unimplemented OpCode!\n");
+                printf("NOOP!\n");
             } // do nothing, not implemented
             break;
         case 0x01:
@@ -307,6 +307,9 @@ void emulator(chip8_t *c8, const config_t config){
                 // 0x00EE return from subroutine
                 c8->PC = *--c8->SP;
             } else { } // do nothing, not implemented
+            break;
+        case 0x01:
+            c8->PC = c8->instruction.NNN;
             break;
         case 0x02:
             // 2NNN call subroutine
