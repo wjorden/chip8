@@ -258,7 +258,7 @@ void print_debug_info(chip8_t *c8){
         case 0x0F:
             switch(c8->instruction.NN){
                 case 0x07:
-                    printf("Set V%01X to delay_timer (%02X)!\n",  c8->instruction.X, c8->instruction.NN);
+                    printf("Set V%01X to delay_timer (%02X)!\n",  c8->instruction.X, c8->delay_timer);
                     break;
                 case 0x0A:
                     printf("Awaiting key press!\n");
@@ -461,6 +461,8 @@ void emulator(chip8_t *c8, const config_t config){
                 case 0x1E:
                     //set I to VX
                     c8->I = c8->V[c8->instruction.X];
+                    // amiga sets carry flag, 1 known game relies on it so...
+                    if(c8->I > 0x0FFF) c8->V[0x0F] = 1;
                     break;
                 case 0x29:
                     // set I to location of sprite
