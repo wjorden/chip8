@@ -153,7 +153,7 @@ bool init_c8(chip8_t *c8, char rom_name[]){
 
 #ifdef DEBUG
 void print_debug_info(chip8_t *c8){
-    printf("Current Addr: 0x%04X, OpCode: 0x%04X, Desc:  ", c8->PC-2, c8->instruction.opcode );
+    printf("Current Addr: 0x%04X, OpCode: 0x%04X, Desc: ", c8->PC-2, c8->instruction.opcode );
     switch((c8->instruction.opcode >> 12) & 0x0F){
         case 0x00:
             if(c8->instruction.NN == 0xE0){
@@ -234,6 +234,14 @@ void print_debug_info(chip8_t *c8){
             // 0xANNN: set I to NNN
             printf("Set I register to NNN (0x%04X)\n", c8->instruction.NNN);
             break;
+        case 0x0B:
+            // Jump to V0 + NNN
+            printf("Set PC(0x%04X) equal to V0 (0x%04X) plus NNN (0x%04X)\n", c8->PC, c8->V[c8->instruction.X], c8->instruction.NNN);
+            break;
+        case 0x0C:
+            // set VX = rand() % 256 & NN
+            printf("Set VX equal to random number from 0-255 & NN.\n");
+            break;
         case 0x0D:
             // DXYN - draw
             printf("Draw pixel at [V%X, V%X] (0x%02X, 0x%02X) height of %X\n", c8->instruction.X, c8->instruction.Y, c8->V[c8->instruction.X], c8->V[c8->instruction.Y], c8->instruction.N);
@@ -249,6 +257,9 @@ void print_debug_info(chip8_t *c8){
             break;
         case 0x0F:
             switch(c8->instruction.NN){
+                case 0x07:
+                    printf("Set V%01X to delay_timer (%02X)!\n",  c8->instruction.X, c8->instruction.NN);
+                    break;
                 case 0x0A:
                     printf("Awaiting key press!\n");
                     break;
@@ -301,10 +312,10 @@ void emulator(chip8_t *c8, const config_t config){
     switch((c8->instruction.opcode >> 12) & 0x0F){
         case 0x00:
             if(c8->instruction.NN == 0xE0){
-                // 0x00E0 clear screen
+                // clear screen
                 memset(&c8->display[0], false, sizeof c8->display);
             } else if(c8->instruction.NN == 0xEE){
-                // 0x00EE return from subroutine
+                // return from subroutine
                 c8->PC = *--c8->SP;
             } else { } // do nothing, not implemented
             break;
@@ -312,7 +323,7 @@ void emulator(chip8_t *c8, const config_t config){
             c8->PC = c8->instruction.NNN;
             break;
         case 0x02:
-            // 2NNN call subroutine
+            // call subroutine
             *c8->SP++ = c8->PC;
             c8->PC = c8->instruction.NNN;
             break;
@@ -342,7 +353,7 @@ void emulator(chip8_t *c8, const config_t config){
             // Add NN to VX
             c8->V[c8->instruction.X] += c8->instruction.NN;
             break;
-        case 0x08:
+        case 0x08: // bit operations
             switch(c8->instruction.N){
                 case 0:
                     // set VX = VY
@@ -404,7 +415,7 @@ void emulator(chip8_t *c8, const config_t config){
             // DXYN: draw at [VX,VY] with a height of N
             // const original location
             const uint8_t oX_coord = c8->V[c8->instruction.X] % config.window_width;
-            
+            // mutable locations 
             uint8_t X_coord = c8->V[c8->instruction.X] % config.window_width;
             uint8_t Y_coord = c8->V[c8->instruction.Y] % config.window_height;
             
@@ -430,7 +441,46 @@ void emulator(chip8_t *c8, const config_t config){
             // if VX = Key, skip next instruction
             // else VX != Key, skip this instruction
             break;
+        case 0x0F:
+            switch(c8->instruction.NN){
+                case 0x07:
+                    // set VX to  delay_timer value
+                    c8->V[c8->instruction.X] = c8->delay_timer;
+                    break;
+                case 0x0A:
+                    // set VX = key pressed
+                    break;
+                case 0x15:
+                    // set delay timer
+                    c8->delay_timer = c8->V[c8->instruction.X];
+                    break;
+                case 0x18:
+                    // set sound timer
+                    c8->sound_timer = c8->V[c8->instruction.X];
+                    break;
+                case 0x1E:
+                    //set I to VX
+                    c8->I = c8->V[c8->instruction.X];
+                    break;
+                case 0x29:
+                    // set I to location of sprite
+                    break;
+                case 0x33:
+                    // Binary Coded Decimal of VX:
+                    // 100's in I
+                    // 10's in I+1
+                    // 1's in I+2
+                    break;
+                case 0x55:
+                    // dump register values into memory
+                    break;
+                case 0x65:
+                    // restore registers from memory
+                    break;
+            }
+            break;
         default:
+            printf("Error! OpCode not exist/implemented! 0x%04X\n", c8->instruction.opcode);
             break;
     }
 }
