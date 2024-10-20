@@ -440,6 +440,12 @@ void emulator(chip8_t *c8, const config_t config){
         case 0x0E:
             // if VX = Key, skip next instruction
             // else VX != Key, skip this instruction
+            if(c8->instruction.NN == 0x9E){
+                c8->PC += 2;
+            } else if( c8->instruction.NN == 0xA1){
+                if(!c8->keys[c8->V[c8->instruction.X]])
+                    c8->PC += 2;
+            }
             break;
         case 0x0F:
             switch(c8->instruction.NN){
@@ -659,7 +665,7 @@ void input_handler(chip8_t *c8){
     }
 }
 
-// shut down emulation
+// shut down e,,mulation
 void cleanup(const sdl_t sdl){
     SDL_DestroyRenderer(sdl.renderer);
     SDL_DestroyWindow(sdl.window);
