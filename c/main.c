@@ -449,6 +449,27 @@ void emulator(chip8_t *c8, const config_t config){
                     break;
                 case 0x0A:
                     // set VX = key pressed
+                    static bool key_pressed = false;
+                    static uint8_t key = 0xFF;
+
+                    for(uint8_t i = 0; key == 0xFF && i < sizeof c8->keys; i++){
+                        if(c8->keys[i]){
+                            key = i;
+                            key_pressed = true;
+                            break;
+                        }
+                        if(!key_pressed) c8->PC -= 2;
+                        else {
+                            if (c8->keys[key])
+                                // busy loop, wait for key up
+                                c8->PC -=2;
+                            else {
+                                c8->V[c8->instruction.X] = key;
+                                key = 0xFF;
+                                key_pressed = false;
+                            }
+                        }
+                    }
                     break;
                 case 0x15:
                     // set delay timer
@@ -459,13 +480,14 @@ void emulator(chip8_t *c8, const config_t config){
                     c8->sound_timer = c8->V[c8->instruction.X];
                     break;
                 case 0x1E:
-                    //set I to VX
+                    // set I to VX
                     c8->I = c8->V[c8->instruction.X];
                     // amiga sets carry flag, 1 known game relies on it so...
                     if(c8->I > 0x0FFF) c8->V[0x0F] = 1;
                     break;
                 case 0x29:
                     // set I to location of sprite
+                    c8->I = c8->V[c8->instruction.X] * 5;
                     break;
                 case 0x33:
                     // Binary Coded Decimal of VX:
@@ -485,6 +507,14 @@ void emulator(chip8_t *c8, const config_t config){
             printf("Error! OpCode not exist/implemented! 0x%04X\n", c8->instruction.opcode);
             break;
     }
+
+    // handle timers
+    if(c8->delay_timer != 0){
+        c8->delay_timer--;
+    } else { c8->delay_timer = 0;}
+    if(c8->sound_timer != 0){
+        c8->sound_timer--;
+    } else { c8->sound_timer = 0;}
 }
 
 void prep_screen(const config_t config, const sdl_t sdl){
@@ -547,11 +577,81 @@ void input_handler(chip8_t *c8){
                             c8->state = RUNNING;
                         }
                         break;
+                    // Map chip8 keys
+                    case SDLK_1: c8->keys[0x1] = true; 
+                        break;    
+                    case SDLK_2: c8->keys[0x2] = true; 
+                        break;    
+                    case SDLK_3: c8->keys[0x3] = true; 
+                        break;    
+                    case SDLK_4: c8->keys[0xC] = true; 
+                        break;    
+                    case SDLK_Q: c8->keys[0x4] = true; 
+                        break;    
+                    case SDLK_W: c8->keys[0x5] = true; 
+                        break;    
+                    case SDLK_E: c8->keys[0x6] = true; 
+                        break;    
+                    case SDLK_R: c8->keys[0xD] = true; 
+                        break;    
+                    case SDLK_A: c8->keys[0x7] = true; 
+                        break;    
+                    case SDLK_S: c8->keys[0x8] = true; 
+                        break;    
+                    case SDLK_D: c8->keys[0x9] = true; 
+                        break;    
+                    case SDLK_F: c8->keys[0xE] = true; 
+                        break;    
+                    case SDLK_Z: c8->keys[0xA] = true; 
+                        break;    
+                    case SDLK_X: c8->keys[0x0] = true; 
+                        break;    
+                    case SDLK_C: c8->keys[0xB] = true; 
+                        break;    
+                    case SDLK_V: c8->keys[0xF] = true; 
+                        break;    
                     default:
                         break;
                 }
                 break;
             case SDL_EVENT_KEY_UP:
+                switch(event.key.key){
+                    // Map chip8 keys
+                    case SDLK_1: c8->keys[0x1] = false; 
+                        break;    
+                    case SDLK_2: c8->keys[0x2] = false; 
+                        break;    
+                    case SDLK_3: c8->keys[0x3] = false; 
+                        break;    
+                    case SDLK_4: c8->keys[0xC] = false; 
+                        break;    
+                    case SDLK_Q: c8->keys[0x4] = false; 
+                        break;    
+                    case SDLK_W: c8->keys[0x5] = false; 
+                        break;    
+                    case SDLK_E: c8->keys[0x6] = false; 
+                        break;    
+                    case SDLK_R: c8->keys[0xD] = false; 
+                        break;    
+                    case SDLK_A: c8->keys[0x7] = false; 
+                        break;    
+                    case SDLK_S: c8->keys[0x8] = false; 
+                        break;    
+                    case SDLK_D: c8->keys[0x9] = false; 
+                        break;    
+                    case SDLK_F: c8->keys[0xE] = false; 
+                        break;    
+                    case SDLK_Z: c8->keys[0xA] = false; 
+                        break;    
+                    case SDLK_X: c8->keys[0x0] = false; 
+                        break;    
+                    case SDLK_C: c8->keys[0xB] = false; 
+                        break;    
+                    case SDLK_V: c8->keys[0xF] = false; 
+                        break;
+                    default:
+                        break;
+                }
                 break;
             default:
                 break;
