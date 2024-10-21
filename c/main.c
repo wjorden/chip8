@@ -53,7 +53,7 @@ typedef struct {
     uint8_t sound_timer;        // ^ will play sound    2B
     bool keys[16];              // 0x0-0xF              2B
     char *rom_name;             // current rom          1B
-    instruction_t instruction;       // current instruction  
+    instruction_t instruction;  // current instruction  
 } chip8_t;
 
 
@@ -88,7 +88,7 @@ bool set_config_args(config_t *config, const int argc, char **argv){
         .bcolor = 0xFFFFFFFF,       // white
         .scaler = 15,               // scale window size, ideally get display size
     };
-    //override defaults
+    // TODO: override defaults by arguments
     for(int i = 1; i < argc; i++){
         (void)argv[i];
     }
@@ -296,6 +296,7 @@ void print_debug_info(chip8_t *c8){
 #endif
 
 void emulator(chip8_t *c8, const config_t config){
+    bool carry;
     c8->instruction.opcode = (c8->ram[c8->PC] << 8 | c8->ram[c8->PC+1]);//get opcode
     c8->PC += 2;                        // increment PC
     // fill chip8 opcode
@@ -320,6 +321,7 @@ void emulator(chip8_t *c8, const config_t config){
             } else { } // do nothing, not implemented
             break;
         case 0x01:
+            // goto address
             c8->PC = c8->instruction.NNN;
             break;
         case 0x02:
@@ -362,34 +364,47 @@ void emulator(chip8_t *c8, const config_t config){
                 case 1:
                     // VX |= VY
                     c8->V[c8->instruction.X] |= c8->V[c8->instruction.Y];
+                    c8->V[0xF] = 0;
                     break;
                 case 2:
                     // VX &= VY
-                   c8->V[c8->instruction.X] &= c8->V[c8->instruction.Y];
+                    c8->V[c8->instruction.X] &= c8->V[c8->instruction.Y];
+                    c8->V[0xF] = 0;
                     break;
                 case 3:
                     // VX ^= VY
                     c8->V[c8->instruction.X] ^= c8->V[c8->instruction.Y];
+                    c8->V[0xF] = 0;
                     break;
                 case 4:
+                    carry = ((uint16_t)(c8->V[c8->instruction.X] + c8->V[c8->instruction.Y]) > 255);
                     // VX += VY
                     c8->V[c8->instruction.X] += c8->V[c8->instruction.Y];
+                    c8->V[0xF] = carry;
                     break;
                 case 5:
+                    carry = (c8->V[c8->instruction.Y] <= c8->V[c8->instruction.X]);
                     // VX -= VY
                     c8->V[c8->instruction.X] -= c8->V[c8->instruction.Y];
+                    c8->V[0xF] = carry;
                     break;
                 case 6:
+                    carry = c8->V[c8->instruction.Y] & 1;
                     // VX >>= VY
-                    c8->V[c8->instruction.X] >>= c8->V[c8->instruction.Y];
+                    c8->V[c8->instruction.X] = c8->V[c8->instruction.Y] >> 1;
+                    c8->V[0xF] = carry;
                     break;
                 case 7:
+                    carry = (c8->V[c8->instruction.X] <= c8->V[c8->instruction.Y]);
                     // VX = VY - VX
                     c8->V[c8->instruction.X] =  c8->V[c8->instruction.Y] - c8->V[c8->instruction.X];
+                    c8->V[0xF] = carry;
                     break;
                 case 0xE:
+                    carry = (c8->V[c8->instruction.Y] & 0x80) >> 7;
                     // VX <<= 1
-                    c8->V[c8->instruction.X] <<= 1;
+                    c8->V[c8->instruction.X] = c8->V[c8->instruction.Y] <<= 1;
+                    c8->V[0xF] = carry;
                     break;
             }
             break;
@@ -400,7 +415,7 @@ void emulator(chip8_t *c8, const config_t config){
             }           
             break;
         case 0x0A:
-            // 0xANNN: set I to NNN
+            // set I to NNN
             c8->I = c8->instruction.NNN;
             break;
         case 0x0B:
@@ -412,7 +427,7 @@ void emulator(chip8_t *c8, const config_t config){
             c8->V[c8->instruction.X] = (rand() % 256) & c8->instruction.NN;
             break;
         case 0x0D:
-            // DXYN: draw at [VX,VY] with a height of N
+            //  draw at [VX,VY] with a height of N
             // const original location
             const uint8_t oX_coord = c8->V[c8->instruction.X] % config.window_width;
             // mutable locations 
@@ -441,7 +456,8 @@ void emulator(chip8_t *c8, const config_t config){
             // if VX = Key, skip next instruction
             // else VX != Key, skip this instruction
             if(c8->instruction.NN == 0x9E){
-                c8->PC += 2;
+                if(c8->keys[c8->V[c8->instruction.X]])
+                    c8->PC += 2;
             } else if( c8->instruction.NN == 0xA1){
                 if(!c8->keys[c8->V[c8->instruction.X]])
                     c8->PC += 2;
@@ -497,9 +513,15 @@ void emulator(chip8_t *c8, const config_t config){
                     break;
                 case 0x33:
                     // Binary Coded Decimal of VX:
-                    // 100's in I
-                    // 10's in I+1
+                    uint8_t bcd = c8->V[c8->instruction.X];
                     // 1's in I+2
+                    c8->ram[c8->I+2] = bcd % 10;
+                    bcd /= 10;
+                    // 10's in I+1
+                    c8->ram[c8->I+1] = bcd % 10;
+                    bcd /= 10;
+                    // 100's in I
+                    c8->ram[c8->I] = bcd;
                     break;
                 case 0x55:
                     // dump register values into memory
