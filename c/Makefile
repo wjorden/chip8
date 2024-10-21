@@ -1,8 +1,10 @@
-CFLAGS := -std=c17 -Wall -Wextra -Werror -ggdb
+CFLAGS 	:= -std=c17 -Wall -Wextra -Werror -ggdb
+CFLAGS	+= -I./include
+SRCS	:= $(wildcard *.c) $(wildcard src/*.c)
 
 all: 
-	gcc main.c -o c8 $(CFLAGS) `pkg-config sdl3 --cflags --libs`
+	gcc $(SRCS) -o c8 $(CFLAGS) `pkg-config sdl3 --cflags --libs`
 
 debug: 
-	gcc main.c -o c8 $(CFLAGS) `pkg-config sdl3 --cflags --libs` -DDEBUG
+	gcc $(SRCS) -o c8 $(CFLAGS) `pkg-config sdl3 --cflags --libs` -DDEBUG
 
