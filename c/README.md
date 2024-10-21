@@ -21,3 +21,16 @@ The chip8 programs come from [kripod](https://github.com/kripod/chip8-roms). As
 they're being used, they are being moved to this directory under a shorter name.
 Currently, the IBM logo is printing, however I'm not sure there are supposed to
 be blank lines in the logo. 
+
+## Current Status
+
+The emulator does work, however movement is a little weird. As it stands,
+pressing `1` moves up and pressing `Q` moves down. what makes it weird is the
+time it takes for it to work. I do have some other pieces to implement, such as
+clearing the screen between draw calls and register dump and load.
+
+## Building
+`make`  
+For debug info:  
+`make deubg`
+
