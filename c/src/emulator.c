@@ -140,27 +140,31 @@ void emulator(chip8_t *c8, const config_t config) {
     c8->V[c8->instruction.X] = (rand() % 256) & c8->instruction.NN;
     break;
   case 0x0D:
-    //  draw at [VX,VY] with a height of N
-    // const original location
+    // draw at [VX,VY] with a height of N
+    // original location
     const uint8_t oX_coord = c8->V[c8->instruction.X] % config.window_width;
     // mutable locations
     uint8_t X_coord = c8->V[c8->instruction.X] % config.window_width;
     uint8_t Y_coord = c8->V[c8->instruction.Y] % config.window_height;
 
     c8->V[0xF] = 0; // init carry flag to 0
-    // loop N rows of sprite
+    // loop N rows (X) of sprite
     for (uint8_t i = 0; i < c8->instruction.N; i++) {
+      // sprite data = I + loop [i]
       uint8_t sprite_d = c8->ram[c8->I + i];
+      // return to og X position
       X_coord = oX_coord;
+      // loop N columns (Y) of sprite
       for (int j = 7; j >= 0; j--) {
+        // left shit 1 by loop and make sure it is still in the window
         if ((sprite_d & (1 << j)) &&
             c8->display[Y_coord * config.window_width + X_coord]) {
+          // set carry flag
           c8->V[0x0F] = 1;
         }
         c8->display[Y_coord * config.window_width + X_coord] ^=
             (sprite_d & (1 << j));
-
-        // stop if right of screen
+        // stop if past right of screen
         if (++X_coord >= config.window_width)
           break;
       }
@@ -251,8 +255,7 @@ void emulator(chip8_t *c8, const config_t config) {
     }
     break;
   default:
-    printf("Error! OpCode not exist/implemented! 0x%04X\n",
-           c8->instruction.opcode);
+    printf("Error! OpCode not implemented! 0x%04X\n", c8->instruction.opcode);
     break;
   }
 
