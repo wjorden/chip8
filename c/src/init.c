@@ -1,5 +1,5 @@
-#include "../include/init.h"
 #include <stdio.h>
+#include "../include/init.h"
 
 // init all required systems
 bool init_sdl(sdl_t *sdl, config_t config){
